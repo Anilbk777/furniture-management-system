@@ -1,22 +1,37 @@
-from typing import Annotated
 import uuid
+from typing import Annotated
+
 import jwt
 from fastapi import Cookie, Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.redis_config import redis_client
 from app.helper.security import decode_access_token
 from app.utils.exceptions import ForbiddenException, UnauthorizedException
 
 from .auth_models import User
-from .auth_repository import UserRepository, RefreshTokenRepository
-from .auth_service import UserService, AuthService
+from .auth_otp_service import OtpService
+from .auth_repository import (
+    PasswordResetRepository,
+    RefreshTokenRepository,
+    UserRepository,
+)
+from .auth_service import AuthService, UserService
 
 
-def get_user_service(db: AsyncSession = Depends(get_db)) -> UserService:
+def get_otp_service() -> OtpService:
+    return OtpService(redis_client)
+
+
+def get_user_service(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    otp: Annotated[OtpService, Depends(get_otp_service)],
+) -> UserService:
     repository = UserRepository(db)
-    return UserService(db=db, repository=repository)
+    return UserService(db=db, repository=repository, otp=otp)
+
 
 bearer_scheme = HTTPBearer(auto_error=False)  # shows the "Authorize" button in Swagger
 
@@ -43,6 +58,7 @@ async def get_current_user(
     user = await UserRepository(db).get_by_id(user_id)
     if not user or not user.is_active:
         raise UnauthorizedException("User not found or inactive")
+
     return user
 
 
@@ -59,7 +75,17 @@ def require_roles(*roles: str):
 
     return checker
 
-def get_auth_service(db: Annotated[AsyncSession, Depends(get_db)]) -> AuthService:
-    return AuthService(UserRepository(db), RefreshTokenRepository(db))
+
+def get_auth_service(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    otp: Annotated[OtpService, Depends(get_otp_service)],
+) -> AuthService:
+    return AuthService(
+        users=UserRepository(db),
+        tokens=RefreshTokenRepository(db),
+        otp=otp,
+        resets=PasswordResetRepository(db),
+    )
+
 
 ServiceDep = Annotated[AuthService, Depends(get_auth_service)]

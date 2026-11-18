@@ -10,6 +10,7 @@ from app.modules.auth.auth_router import router as auth_router
 
 from app.utils.exceptions import register_exception_handlers
 from app.utils.logger import get_logger
+from app.core.redis_config import init_redis, close_redis
 
 from app.modules.employees.employees_router import router as employees_router
 from app.modules.organization.organization_router import router as organization_router
@@ -21,10 +22,12 @@ logger = get_logger(__name__)
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     await wait_for_db()
+    await init_redis()
 
     yield
     # Shutdown
     await dispose_engine()
+    await close_redis()
 
 
 app = FastAPI(title="My API", lifespan=lifespan)
