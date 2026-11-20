@@ -10,6 +10,7 @@ from starlette.concurrency import run_in_threadpool
 from app.utils.logger import get_logger
 
 from ...helper.security import (
+    DUMMY_HASH,
     create_access_token,
     create_refresh_token,
     decode_refresh_token,
@@ -195,7 +196,7 @@ class AuthService:
         user = await self._find_by_identifier(identifier)
         # Always run a hash check (argon2 is CPU-heavy, so keep it off the event loop)
         password_ok = await run_in_threadpool(
-            verify_password, password, user.password_hash if user else "DUMMY_HASH"
+            verify_password, password, user.password_hash if user else DUMMY_HASH
         )
         if not user or not password_ok:
             logger.warning(f"Failed login from ip={ip}")
