@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     sender_email: str
 
     frontend_url: str
-    mobile_reset_url:str
+    mobile_reset_url: str
 
     reset_token_ttl_seconds: int = 3600
 
@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     cookie_samesite: Literal["lax", "strict", "none"] = "lax"
     cookie_domain: str | None = None
     cors_origins: list[str] = []
+
+    brand_logo_url: str = ""
 
 
 settings = Settings()

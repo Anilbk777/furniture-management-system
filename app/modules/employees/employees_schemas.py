@@ -56,3 +56,13 @@ class EmployeeRead(BaseModel):
 class EmployeeList(BaseModel):
     employees: list[EmployeeRead]
     pagination: Pagination
+
+
+class EmployeeOverview(BaseModel):
+    """Headline numbers for the employees dashboard card."""
+
+    total: int
+    active: int
+    inactive: int
+    active_salary_total: Decimal
+    inactive_salary_total: Decimal

@@ -9,13 +9,12 @@ import asyncio
 import ssl
 from collections.abc import AsyncIterator
 
+from app.core.config import settings
+from app.utils.logger import get_logger
 from sqlalchemy import text
 from sqlalchemy.engine import URL, make_url
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-
-from app.core.config import settings
-from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -60,7 +59,7 @@ engine = create_async_engine(
     pool_pre_ping=True,  # test a connection before use; reconnect if it was dropped
     connect_args={
         **ssl_args,
-        "timeout": 15,  # seconds to connect (Neon may be waking up)
+        "timeout": 30,  # seconds to connect (Neon may be waking up)
         "command_timeout": 30,  # seconds per query
         # PgBouncer (transaction mode) can break asyncpg's prepared statement cache
         "statement_cache_size": 0,

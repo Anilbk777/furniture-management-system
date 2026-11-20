@@ -26,17 +26,30 @@ async def send_email(to: str, subject: str, html: str) -> None:
         )
     response.raise_for_status()
 
+def _logo_block() -> str:
+    url = settings.brand_logo_url.strip()
+    if url:
+        return (
+            f'<img src="{url}" width="200" height="113" alt="Furniva" '
+            'style="display:block;margin:0 auto 20px;border:0;outline:none;'
+            'max-width:200px;height:auto;">'
+        )
+    return (
+        '<span style="display:block;margin:0 auto 20px;font-size:24px;'
+        'font-weight:700;color:#843E16;letter-spacing:-0.5px;">Furniva</span>'
+    )
+
 async def send_otp_email(to: str, code: str) -> None:
     """Meant for BackgroundTasks: logs failures instead of raising, never logs the code."""
 
-    # HTML template with Furnish styling inspired by image_0.png
+    # HTML template with Furniva styling inspired by image_0.png
     html = f"""
     <!DOCTYPE html>
     <html lang="en">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Verify your email - Furnish</title>
+        <title>Verify your email - Furniva</title>
         <style>
             body {{
                 margin: 0;
@@ -62,28 +75,7 @@ async def send_otp_email(to: str, code: str) -> None:
                 padding: 40px 32px 32px 32px;
                 text-align: center;
             }}
-            .brand-logo {{
-                display: inline-flex;
-                align-items: center;
-                gap: 8px;
-                margin-bottom: 24px;
-            }}
-            .logo-icon {{
-                background-color: #843E16; /* Primary deep brown */
-                color: #FFFFFF;
-                border-radius: 6px;
-                padding: 6px 8px;
-                font-weight: bold;
-                display: inline-block;
-                vertical-align: middle;
-            }}
-            .logo-text {{
-                font-size: 24px;
-                font-weight: 700;
-                color: #292524;
-                vertical-align: middle;
-                letter-spacing: -0.5px;
-            }}
+            
             h1 {{
                 font-size: 28px;
                 color: #292524;
@@ -163,13 +155,10 @@ async def send_otp_email(to: str, code: str) -> None:
         <div class="email-wrapper">
             <div class="email-container">
                 <div class="email-content">
-                    <div class="brand-logo">
-                        <span class="logo-icon">🪑</span>
-                        <span class="logo-text">Furnish</span>
-                    </div>
+                    {_logo_block()}
                     
                     <h1>Verify your email</h1>
-                    <p>To finish setting up your Furnish account, please use the verification code below. It will expire in 10 minutes.</p>
+                    <p>To finish setting up your Furniva account, please use the verification code below. It will expire in 10 minutes.</p>
                     
                     <div class="code-box">{code}</div>
                     
@@ -177,19 +166,19 @@ async def send_otp_email(to: str, code: str) -> None:
                         If you didn't request this, you can safely ignore this email.
                     </p>
                     
-                    <a href="https://furnish.app" class="btn">Go to Furnish</a>
+                    <a href="{settings.frontend_url.rstrip('/')}" class="btn">Go to Furniva</a>
                 </div>
                 
                 <div class="divider"></div>
                 
                 <div class="email-footer">
-                    <p class="footer-tagline">Furnish — Crafted for your home</p>
+                    <p class="footer-tagline">Furniva — Crafted for your home</p>
                     <div class="footer-icons">
                         <span style="color: #843E16; font-size: 16px;">✦</span>
                         <span style="color: #D97706; font-size: 16px;">✦</span>
                         <span style="color: #1E4B33; font-size: 16px;">✦</span>
                     </div>
-                    <p class="footer-legal">© 2026 Furnish Inc. All rights reserved.</p>
+                    <p class="footer-legal">© 2026 Furniva Inc. All rights reserved.</p>
                 </div>
             </div>
         </div>
@@ -197,7 +186,7 @@ async def send_otp_email(to: str, code: str) -> None:
     </html>
     """
     try:
-        await send_email(to, f"{code} is your Furnish verification code", html)
+        await send_email(to, f"{code} is your Furniva verification code", html)
         logger.info(f"OTP email sent to {to}")
     except httpx.HTTPStatusError as exc:
         logger.error(
@@ -215,14 +204,14 @@ async def send_reset_password_email(to: str, token: str, mobile: bool = False) -
         else f"{settings.frontend_url.rstrip('/')}/reset-password"
     )
     link = f"{reset_url}?token={token}"
-    # HTML template with Furnish styling inspired by your brand palette
+    # HTML template with Furniva styling inspired by your brand palette
     html = f"""
     <!DOCTYPE html>
     <html lang="en">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Reset your password - Furnish</title>
+        <title>Reset your password - Furniva</title>
         <style>
             body {{
                 margin: 0;
@@ -248,28 +237,7 @@ async def send_reset_password_email(to: str, token: str, mobile: bool = False) -
                 padding: 40px 32px 32px 32px;
                 text-align: center;
             }}
-            .brand-logo {{
-                display: inline-flex;
-                align-items: center;
-                gap: 8px;
-                margin-bottom: 24px;
-            }}
-            .logo-icon {{
-                background-color: #843E16; /* Primary deep brown */
-                color: #FFFFFF;
-                border-radius: 6px;
-                padding: 6px 8px;
-                font-weight: bold;
-                display: inline-block;
-                vertical-align: middle;
-            }}
-            .logo-text {{
-                font-size: 24px;
-                font-weight: 700;
-                color: #292524;
-                vertical-align: middle;
-                letter-spacing: -0.5px;
-            }}
+            
             h1 {{
                 font-size: 28px;
                 color: #292524;
@@ -346,13 +314,9 @@ async def send_reset_password_email(to: str, token: str, mobile: bool = False) -
         <div class="email-wrapper">
             <div class="email-container">
                 <div class="email-content">
-                    <div class="brand-logo">
-                        <span class="logo-icon">🪑</span>
-                        <span class="logo-text">Furnish</span>
-                    </div>
-                    
+                    {_logo_block()}
                     <h1>Reset your password</h1>
-                    <p>We received a request to reset the password for your Furnish account. Click the button below to choose a new one. This link expires in 1 hour.</p>
+                    <p>We received a request to reset the password for your Furniva account. Click the button below to choose a new one. This link expires in 1 hour.</p>
                     
                     <a href="{link}" class="btn">Reset password</a>
                     
@@ -369,13 +333,13 @@ async def send_reset_password_email(to: str, token: str, mobile: bool = False) -
                 <div class="divider"></div>
                 
                 <div class="email-footer">
-                    <p class="footer-tagline">Furnish — Crafted for your home</p>
+                    <p class="footer-tagline">Furniva — Crafted for your home</p>
                     <div class="footer-icons">
                         <span style="color: #843E16; font-size: 16px;">✦</span>
                         <span style="color: #D97706; font-size: 16px;">✦</span>
                         <span style="color: #1E4B33; font-size: 16px;">✦</span>
                     </div>
-                    <p class="footer-legal">© 2026 Furnish Inc. All rights reserved.</p>
+                    <p class="footer-legal">© 2026 Furniva Inc. All rights reserved.</p>
                 </div>
             </div>
         </div>
@@ -384,7 +348,7 @@ async def send_reset_password_email(to: str, token: str, mobile: bool = False) -
     """
     
     try:
-        await send_email(to, "Reset your Furnish password", html)
+        await send_email(to, "Reset your Furniva password", html)
         logger.info(f"Password reset email sent to {to}")
     except httpx.HTTPStatusError as exc:
         logger.error(f"Resend rejected reset email to {to}: {exc.response.status_code} {exc.response.text}")

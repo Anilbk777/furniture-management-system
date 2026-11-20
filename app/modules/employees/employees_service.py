@@ -8,7 +8,7 @@ from app.utils.logger import get_logger
 from ...utils.exceptions import NotFoundException
 from .employees_models import Employee
 from .employees_repository import EmployeeRepository
-from .employees_schemas import EmployeeCreate, EmployeeUpdate
+from .employees_schemas import EmployeeCreate, EmployeeOverview, EmployeeUpdate
 
 logger = get_logger(__name__)
 
@@ -44,6 +44,18 @@ class EmployeeService:
     ) -> tuple[Sequence[Employee], int]:
         return await self.repo.list(
             organization_id, search=search, is_active=is_active, page=page, limit=limit
+        )
+
+    async def overview(self, organization_id: uuid.UUID) -> EmployeeOverview:
+        total, active, inactive, active_salary, inactive_salary = (
+            await self.repo.overview(organization_id)
+        )
+        return EmployeeOverview(
+            total=total,
+            active=active,
+            inactive=inactive,
+            active_salary_total=active_salary,
+            inactive_salary_total=inactive_salary,
         )
 
     async def update(

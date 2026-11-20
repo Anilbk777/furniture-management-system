@@ -1,21 +1,19 @@
 import time
 from contextlib import asynccontextmanager
 
-from fastapi import APIRouter, FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
-
 from app.core.config import settings
 from app.core.database import dispose_engine, wait_for_db
+from app.core.redis_config import close_redis, init_redis
 from app.modules.auth.auth_router import router as auth_router
-
-from app.utils.exceptions import register_exception_handlers
-from app.utils.logger import get_logger
-from app.core.redis_config import init_redis, close_redis
-
 from app.modules.employees.employees_router import router as employees_router
 from app.modules.organization.organization_router import router as organization_router
 from app.modules.party.party_router import parties, party_types
 from app.modules.transaction.transaction_router import router as transaction_router
+from app.utils.exceptions import register_exception_handlers
+from app.utils.logger import get_logger
+from fastapi import APIRouter, FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+
 logger = get_logger(__name__)
 
 

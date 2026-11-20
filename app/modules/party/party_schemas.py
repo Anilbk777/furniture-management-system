@@ -93,3 +93,11 @@ class PartyRead(BaseModel):
 class PartyList(BaseModel):
     parties: list[PartyRead]
     pagination: Pagination
+
+
+class PartyOverview(BaseModel):
+    """Headline numbers for the parties screens."""
+
+    total: int
+    active: int
+    inactive: int

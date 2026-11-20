@@ -1,8 +1,8 @@
-from fastapi import APIRouter, status
+from fastapi import APIRouter, status, Depends
 from fastapi.responses import JSONResponse
 
 from app.utils.response import APIResponse, success_response
-from app.modules.auth.auth_dependencies import CurrentUser  # your get_current_user
+from app.modules.auth.auth_dependencies import CurrentUser , require_roles
 from .organization_dependencies import OrganizationServiceDep
 from .organization_schemas import (
     OrganizationCreate,
@@ -52,7 +52,9 @@ async def update_my_organization(
 
 @router.delete("", response_model=APIResponse[None])
 async def deactivate_my_organization(
-    user: CurrentUser, service: OrganizationServiceDep
+    user: CurrentUser,
+    service: OrganizationServiceDep,
+    dependencies=[Depends(require_roles("super_admin"))],
 ) -> JSONResponse:
     await service.deactivate_mine(user.id)
     return success_response(None, "Organization deactivated")

@@ -2,22 +2,24 @@ import math
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Query, status
-from fastapi.responses import JSONResponse
-
-from app.utils.response import APIResponse, success_response
 from app.helper.base import BS_DATE_REGEX
+
 # from .transaction_enums  import PaymentMethod, TxKind
-from app.modules.auth.auth_dependencies import CurrentUser  
+from app.modules.auth.auth_dependencies import CurrentUser
 from app.modules.organization.organization_dependencies import CurrentOrganization
 from app.modules.transaction.transaction_dependencies import TransactionServiceDep
 from app.modules.transaction.transaction_schemas import (
+    EmployeeBrief,
     Pagination,
     TransactionCreate,
     TransactionList,
     TransactionRead,
+    TransactionTotals,
     TransactionUpdate,
 )
+from app.utils.response import APIResponse, success_response
+from fastapi import APIRouter, Query, status
+from fastapi.responses import JSONResponse
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
 
@@ -64,7 +66,7 @@ async def list_transactions(
 ) -> JSONResponse:
     transactions, total = await service.list(
         org.id,
-        kinds=kind,
+        kinds=[kind] if kind else None,
         employee_id=employee_id,
         party_id=party_id,
         payment_method=payment_method,
@@ -74,8 +76,19 @@ async def list_transactions(
         page=page,
         limit=limit,
     )
+    _, amounts = await service.totals(
+        org.id,
+        kinds=[kind] if kind else None,
+        employee_id=employee_id,
+        party_id=party_id,
+        date_from=date_from,
+        date_to=date_to,
+    )
+    employee = await service.get_employee(org.id, employee_id) if employee_id else None
     data = TransactionList(
         transactions=[TransactionRead.model_validate(t) for t in transactions],
+        employee=EmployeeBrief.model_validate(employee) if employee else None,
+        totals=TransactionTotals(count=total, amounts=amounts),
         pagination=Pagination(
             total=total, page=page, limit=limit, total_pages=math.ceil(total / limit)
         ),

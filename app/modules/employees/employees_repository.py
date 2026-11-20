@@ -1,8 +1,9 @@
 import datetime as dt
 import uuid
 from collections.abc import Sequence
+from decimal import Decimal
 
-from sqlalchemy import select, func
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .employees_models import Employee
@@ -60,6 +61,47 @@ class EmployeeRepository:
             .offset((page - 1) * limit)
         )
         return rows.all(), total or 0
+
+    async def overview(
+        self, organization_id: uuid.UUID
+    ) -> tuple[int, int, int, Decimal, Decimal]:
+        """Counts and monthly-salary totals for one organization, in a single query."""
+        stmt = select(
+            func.count(),
+            func.count().filter(Employee.is_active.is_(True)),
+            func.count().filter(Employee.is_active.is_(False)),
+            func.coalesce(
+                func.sum(
+                    case(
+                        (Employee.is_active.is_(True), Employee.monthly_salary),
+                        else_=Decimal("0"),
+                    )
+                ),
+                Decimal("0"),
+            ),
+            func.coalesce(
+                func.sum(
+                    case(
+                        (Employee.is_active.is_(False), Employee.monthly_salary),
+                        else_=Decimal("0"),
+                    )
+                ),
+                Decimal("0"),
+            ),
+        ).where(
+            Employee.organization_id == organization_id,
+            Employee.deleted_at.is_(None),
+        )
+        total, active, inactive, active_salary, inactive_salary = (
+            await self.session.execute(stmt)
+        ).one()
+        return (
+            int(total or 0),
+            int(active or 0),
+            int(inactive or 0),
+            Decimal(active_salary or 0),
+            Decimal(inactive_salary or 0),
+        )
 
     async def update(self, employee: Employee, values: dict) -> Employee:
         for field, value in values.items():

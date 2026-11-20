@@ -5,7 +5,13 @@ from fastapi import APIRouter, Query, status
 from fastapi.responses import JSONResponse
 from ...utils.response import APIResponse, success_response
 from .employees_dependencies import EmployeeServiceDep
-from .employees_schemas import EmployeeCreate, EmployeeRead, EmployeeUpdate, EmployeeList
+from .employees_schemas import (
+    EmployeeCreate,
+    EmployeeList,
+    EmployeeOverview,
+    EmployeeRead,
+    EmployeeUpdate,
+)
 from ...utils.response import Pagination
 # from ..auth.auth_dependencies import CurrentUser
 from ..organization.organization_dependencies import CurrentOrganization
@@ -36,7 +42,7 @@ async def list_employees(
     ] = None,
     is_active: bool | None = None,
     page: Annotated[int, Query(ge=1)] = 1,
-    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    limit: Annotated[int, Query(ge=1, le=100)] = 10,
 ) -> JSONResponse:
     employees, total = await service.list(
         org.id, search=search, is_active=is_active, page=page, limit=limit
@@ -48,6 +54,15 @@ async def list_employees(
         ),
     )
     return success_response(data, "Employees fetched")
+
+@router.get("/overview", response_model=APIResponse[EmployeeOverview])
+async def employees_overview(
+    org: CurrentOrganization, service: EmployeeServiceDep
+) -> JSONResponse:
+    """Headline counts and salary totals (declared before /{employee_id})."""
+    data = await service.overview(org.id)
+    return success_response(data, "Employee overview fetched")
+
 
 @router.get("/{employee_id}", response_model=APIResponse[EmployeeRead])
 async def get_employee(

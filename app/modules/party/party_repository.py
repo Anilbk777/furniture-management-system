@@ -163,6 +163,19 @@ class PartyRepository:
             .offset((page - 1) * limit)
         )
         return rows.all(), total or 0
+    async def overview(self, organization_id: uuid.UUID) -> tuple[int, int, int]:
+        """Party counts for one organization, in a single query."""
+        stmt = select(
+            func.count(),
+            func.count().filter(Party.is_active.is_(True)),
+            func.count().filter(Party.is_active.is_(False)),
+        ).where(
+            Party.organization_id == organization_id,
+            Party.deleted_at.is_(None),
+        )
+        total, active, inactive = (await self.session.execute(stmt)).one()
+        return int(total or 0), int(active or 0), int(inactive or 0)
+
     async def update(self, party: Party, values: dict) -> Party:
         for field, value in values.items():
             setattr(party, field, value)

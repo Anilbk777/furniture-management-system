@@ -2,14 +2,18 @@ import uuid
 from collections.abc import Sequence
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError
 
-from ...utils.exceptions import BadRequestException, NotFoundException
-# from .transaction_enums import PaymentMethod, TxKind
+from ...utils.exceptions import (
+    BadRequestException,
+    NotFoundException,
+    ConflictException,
+)
 from .transaction_models import Transaction
+from app.modules.employees.employees_models import Employee
 from app.modules.employees.employees_repository import EmployeeRepository
 from app.modules.party.party_repository import PartyRepository
 from app.modules.transaction.transaction_repository import TransactionRepository
-# from app.modules.transaction.transaction_rules import check_shape
 from app.modules.transaction.transaction_schemas import (
     TransactionCreate,
     TransactionUpdate,
@@ -93,6 +97,12 @@ class TransactionService:
         )
         return transaction
 
+    async def get_employee(
+        self, org_id: uuid.UUID, employee_id: uuid.UUID
+    ) -> Employee | None:
+        """The employee header for a transaction list, so the client needs one call."""
+        return await self.employee_repo.get(org_id, employee_id)
+
     async def get(self, org_id: uuid.UUID, transaction_id: uuid.UUID) -> Transaction:
         transaction = await self.repo.get(org_id, transaction_id)
         if transaction is None:  # also what another organization's id looks like
@@ -106,7 +116,7 @@ class TransactionService:
         self,
         org_id: uuid.UUID,
         *,
-        kinds: str | None,
+        kinds: Sequence[str] | None,
         employee_id: uuid.UUID | None,
         party_id: uuid.UUID | None,
         payment_method: str | None,
@@ -136,6 +146,27 @@ class TransactionService:
             search=search,
             limit=limit,
             offset=(page - 1) * limit,
+        )
+
+    async def totals(
+        self,
+        org_id: uuid.UUID,
+        *,
+        kinds: Sequence[str] | None,
+        employee_id: uuid.UUID | None,
+        party_id: uuid.UUID | None,
+        date_from: str | None,
+        date_to: str | None,
+    ) -> tuple[int, dict]:
+        if date_from and date_to and date_from > date_to:
+            raise BadRequestException("date from cannot be after date to")
+        return await self.repo.totals(
+            org_id,
+            kinds=kinds,
+            employee_id=employee_id,
+            party_id=party_id,
+            date_from=date_from,
+            date_to=date_to,
         )
 
     async def update(
@@ -199,15 +230,24 @@ class TransactionService:
         return transaction
 
     async def delete(self, org_id: uuid.UUID, transaction_id: uuid.UUID) -> None:
-        """Soft delete: hidden from every list, the row is kept."""
+        """Permanent delete: the row is removed from the database and cannot be recovered."""
         transaction = await self.get(org_id, transaction_id)
+        summary = (transaction.kind, transaction.amount, transaction.bs_date)  # keep a trace
         try:
-            await self.repo.soft_delete(transaction)
+            await self.repo.delete(transaction)
             await self.session.commit()
+        except IntegrityError:
+            await self.session.rollback()
+            raise ConflictException(
+                message="This transaction can't be deleted because other records depend on it"
+            )
         except Exception:
             await self.session.rollback()
             logger.exception(
                 "Failed to delete transaction %s org=%s", transaction_id, org_id
             )
             raise
-        logger.info("Transaction deleted id=%s org=%s", transaction_id, org_id)
+        logger.info(
+            "Transaction permanently deleted id=%s kind=%s amount=%s bs_date=%s org=%s",
+            transaction_id, *summary, org_id,
+        )

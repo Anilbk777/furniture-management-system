@@ -3,7 +3,7 @@ import uuid
 from decimal import Decimal
 from typing import Annotated, Self
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.helper.base import BS_DATE_REGEX
 from app.utils.response import (
@@ -11,11 +11,28 @@ from app.utils.response import (
 )
 
 # from .transaction_enums import PaymentMethod, TxKind
+from .transaction_enums import PaymentMethod, TxKind
 from .transaction_rules import check_shape
 
 # BS date as text, e.g. "2083-07-27" (the frontend date picker sends this)
 BsDate = Annotated[str, Field(pattern=BS_DATE_REGEX, examples=["2083-07-27"])]
 Money = Annotated[Decimal, Field(gt=0, max_digits=14, decimal_places=2)]
+
+
+def _checked_kind(value: str) -> str:
+    try:
+        return TxKind(value).value
+    except ValueError as exc:
+        raise ValueError("unknown transaction kind") from exc
+
+
+def _checked_method(value: str | None) -> str | None:
+    if value is None:
+        return None
+    try:
+        return PaymentMethod(value).value
+    except ValueError as exc:
+        raise ValueError("unknown payment method") from exc
 
 
 class TransactionCreate(BaseModel):
@@ -28,6 +45,16 @@ class TransactionCreate(BaseModel):
     employee_id: uuid.UUID | None = None
     party_id: uuid.UUID | None = None
     note: str | None = Field(None, max_length=1000)
+
+    @field_validator("kind")
+    @classmethod
+    def valid_kind(cls, value: str) -> str:
+        return _checked_kind(value)
+
+    @field_validator("payment_method")
+    @classmethod
+    def valid_payment_method(cls, value: str | None) -> str | None:
+        return _checked_method(value)
 
     @model_validator(mode="after")
     def check_rules(self) -> Self:
@@ -53,6 +80,16 @@ class TransactionUpdate(BaseModel):
     party_id: uuid.UUID | None = None
     note: str | None = Field(None, max_length=1000)
 
+    @field_validator("kind")
+    @classmethod
+    def valid_kind(cls, value: str | None) -> str | None:
+        return None if value is None else _checked_kind(value)
+
+    @field_validator("payment_method")
+    @classmethod
+    def valid_payment_method(cls, value: str | None) -> str | None:
+        return _checked_method(value)
+
     @model_validator(mode="after")
     def required_fields_not_null(self) -> Self:
         for field in ("bs_date", "amount"):
@@ -66,6 +103,8 @@ class EmployeeBrief(BaseModel):
 
     id: uuid.UUID
     name: str
+    role_title: str | None
+    is_active: bool
 
 
 class PartyBrief(BaseModel):
@@ -91,6 +130,20 @@ class TransactionRead(BaseModel):
     updated_at: dt.datetime
 
 
+class TransactionTotals(BaseModel):
+    """Sums for the current filter (e.g. one employee's current BS month)."""
+
+    count: int
+    amounts: dict[str, Decimal]
+
+
 class TransactionList(BaseModel):
+    """One page of transactions plus the filtered employee and their totals.
+
+    Everything the employee detail screen needs comes back in this single call.
+    """
+
     transactions: list[TransactionRead]
     pagination: Pagination
+    employee: EmployeeBrief | None = None
+    totals: TransactionTotals

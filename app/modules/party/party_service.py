@@ -13,6 +13,7 @@ from .party_models import Party, PartyType
 from .party_repository import PartyRepository, PartyTypeRepository
 from .party_schemas import (
     PartyCreate,
+    PartyOverview,
     PartyTypeCreate,
     PartyTypeUpdate,
     PartyUpdate,
@@ -121,6 +122,10 @@ class PartyService:
             page=page,
             limit=limit,
         )
+
+    async def overview(self, organization_id: uuid.UUID) -> PartyOverview:
+        total, active, inactive = await self.repo.overview(organization_id)
+        return PartyOverview(total=total, active=active, inactive=inactive)
 
     async def update(
         self, organization_id: uuid.UUID, party_id: uuid.UUID, data: PartyUpdate

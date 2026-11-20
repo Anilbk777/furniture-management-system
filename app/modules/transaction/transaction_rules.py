@@ -48,18 +48,18 @@ def check_shape(
     """Return an error message, or None when the combination is valid."""
     if kind in OWN_KINDS:
         if employee_id is not None or party_id is not None:
-            return f"{kind.value} cannot be linked to an employee or a party"
+            return f"{kind} cannot be linked to an employee or a party"
     elif kind in EMPLOYEE_KINDS:
         if employee_id is None or party_id is not None:
-            return f"{kind.value} needs an employee_id and cannot have a party_id"
+            return f"{kind} needs an employee_id and cannot have a party_id"
     elif kind in PARTY_KINDS:
         if party_id is None or employee_id is not None:
-            return f"{kind.value} needs a party_id and cannot have an employee_id"
+            return f"{kind} needs a party_id and cannot have an employee_id"
 
     if kind in METHOD_REQUIRED and payment_method is None:
-        return f"{kind.value} needs a payment_method"
+        return f"{kind} needs a payment_method"
     if kind in METHOD_FORBIDDEN and payment_method is not None:
-        return f"{kind.value} must not have a payment_method (no money moved)"
+        return f"{kind} must not have a payment_method (no money moved)"
     return None
 
 

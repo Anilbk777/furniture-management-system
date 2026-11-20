@@ -1,6 +1,6 @@
-import datetime as dt
 import uuid
 from collections.abc import Sequence
+from decimal import Decimal
 
 from sqlalchemy import ColumnElement, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -125,9 +125,8 @@ class TransactionRepository:
             .options(*_with_people())
             .where(*conditions)
             .order_by(
-                # Transaction.bs_date.desc(),
+                Transaction.bs_date.desc(),
                 Transaction.created_at.desc(),
-                # Transaction.id.desc(),
             )
             .limit(limit)
             .offset(offset)
@@ -135,12 +134,47 @@ class TransactionRepository:
         rows = (await self.session.execute(stmt)).scalars().all()
         return rows, total
 
+    async def totals(
+        self,
+        organization_id: uuid.UUID,
+        *,
+        kinds: Sequence[str] | None = None,
+        employee_id: uuid.UUID | None = None,
+        party_id: uuid.UUID | None = None,
+        date_from: str | None = None,
+        date_to: str | None = None,
+    ) -> tuple[int, dict[str, Decimal]]:
+        """Count and per-kind sums for the same filters the list endpoint uses."""
+        conditions = self._conditions(
+            organization_id,
+            kinds=kinds,
+            employee_id=employee_id,
+            party_id=party_id,
+            payment_method=None,
+            date_from=date_from,
+            date_to=date_to,
+            search=None,
+        )
+        count = (
+            await self.session.execute(
+                select(func.count()).select_from(Transaction).where(*conditions)
+            )
+        ).scalar_one()
+        rows = (
+            await self.session.execute(
+                select(Transaction.kind, func.sum(Transaction.amount))
+                .where(*conditions)
+                .group_by(Transaction.kind)
+            )
+        ).all()
+        return count, {kind: amount for kind, amount in rows}
+
     async def update(self, transaction: Transaction, values: dict) -> Transaction:
         for field, value in values.items():
             setattr(transaction, field, value)
         await self.session.flush()
         return await self._fetch(transaction.id)  # fresh updated_at and employee/party
 
-    async def soft_delete(self, transaction: Transaction) -> None:
-        transaction.deleted_at = dt.datetime.now(dt.UTC)
+    async def delete(self, transaction: Transaction) -> None:
+        await self.session.delete(transaction)
         await self.session.flush()

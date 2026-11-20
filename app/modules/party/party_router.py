@@ -13,6 +13,7 @@ from .party_dependencies import (
 )
 from .party_schemas import (
     PartyCreate,
+    PartyOverview,
     PartyRead,
     PartyTypeCreate,
     PartyTypeRead,
@@ -111,6 +112,14 @@ async def list_parties(
         ),
     )
     return success_response(data, "Parties fetched")
+
+@parties.get("/overview", response_model=APIResponse[PartyOverview])
+async def parties_overview(
+    org: CurrentOrganization, service: PartyServiceDep
+) -> JSONResponse:
+    data = await service.overview(org.id)
+    return success_response(data, "Party overview fetched")
+
 
 @parties.get("/{party_id}", response_model=APIResponse[PartyRead])
 async def get_party(
