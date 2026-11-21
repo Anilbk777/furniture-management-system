@@ -6,6 +6,7 @@ from sqlalchemy import ColumnElement, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
+from .transaction_enums import TxKind
 from .transaction_models import Transaction
 
 
@@ -167,7 +168,10 @@ class TransactionRepository:
                 .group_by(Transaction.kind)
             )
         ).all()
-        return count, {kind: amount for kind, amount in rows}
+        # Every kind is present, so the overview card always shows all of them.
+        amounts: dict[str, Decimal] = {kind.value: Decimal("0") for kind in TxKind}
+        amounts.update({kind: amount for kind, amount in rows})
+        return count, amounts
 
     async def update(self, transaction: Transaction, values: dict) -> Transaction:
         for field, value in values.items():

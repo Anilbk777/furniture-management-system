@@ -9,6 +9,7 @@ from app.modules.employees.employees_router import router as employees_router
 from app.modules.organization.organization_router import router as organization_router
 from app.modules.party.party_router import parties, party_types
 from app.modules.transaction.transaction_router import router as transaction_router
+from app.modules.attendance.attendance_router import router as attendance_router
 from app.utils.exceptions import register_exception_handlers
 from app.utils.logger import get_logger
 from fastapi import APIRouter, FastAPI, Request
@@ -61,6 +62,7 @@ api_router.include_router(employees_router)
 api_router.include_router(party_types)
 api_router.include_router(parties)
 api_router.include_router(transaction_router)
+api_router.include_router(attendance_router)
 
 app.include_router(api_router)
 
