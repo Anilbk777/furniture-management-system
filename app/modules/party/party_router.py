@@ -1,26 +1,26 @@
-import uuid
 import math
+import uuid
 from typing import Annotated
 
+from app.modules.organization.organization_dependencies import CurrentOrganization
+from app.utils.response import APIResponse, success_response
 from fastapi import APIRouter, Query, status
 from fastapi.responses import JSONResponse
 
-from app.utils.response import APIResponse, success_response
-from app.modules.organization.organization_dependencies import CurrentOrganization
 from .party_dependencies import (
     PartyServiceDep,
     PartyTypeServiceDep,
 )
 from .party_schemas import (
+    Pagination,
     PartyCreate,
+    PartyList,
     PartyOverview,
     PartyRead,
     PartyTypeCreate,
     PartyTypeRead,
     PartyTypeUpdate,
     PartyUpdate,
-    PartyList,
-    Pagination
 )
 
 parties = APIRouter(prefix="/parties", tags=["parties"])
@@ -85,6 +85,7 @@ async def create_party(
         PartyRead.model_validate(party), "Party created", status.HTTP_201_CREATED
     )
 
+
 @parties.get("", response_model=APIResponse[PartyList])
 async def list_parties(
     org: CurrentOrganization,
@@ -112,6 +113,7 @@ async def list_parties(
         ),
     )
     return success_response(data, "Parties fetched")
+
 
 @parties.get("/overview", response_model=APIResponse[PartyOverview])
 async def parties_overview(
@@ -146,4 +148,3 @@ async def delete_party(
 ) -> JSONResponse:
     await service.delete(org.id, party_id)
     return success_response(None, "Party deleted")
-
