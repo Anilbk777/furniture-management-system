@@ -1,4 +1,5 @@
 import uuid
+from decimal import Decimal
 from typing import Annotated
 
 from fastapi import APIRouter, Query, status
@@ -11,7 +12,9 @@ from app.modules.attendance.attendance_schemas import (
     AttendanceUpdate,
     EmployeeAttendanceDetails,
     EmployeeBrief,
+    EmployeeDayAttendance,
     Pagination,
+    TodayAttendanceList,
 )
 from app.modules.attendance.attendance_types import BsDate
 
@@ -52,6 +55,43 @@ async def employee_attendance_details(
         records=[AttendanceRead.model_validate(r) for r in records],
     )
     return success_response(data, "Attendance details fetched")
+
+
+# ---------- today's roster: every employee + their attendance for today's BS date ----------
+@router.get("/today", response_model=APIResponse[TodayAttendanceList])
+async def today_attendance(
+    org: CurrentOrganization,
+    service: AttendanceServiceDep,
+    page: Annotated[int, Query(ge=1)] = 1,
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+) -> JSONResponse:
+    """One page of employees with today's attendance. An employee without a record is
+    still listed, with status / check-in / check-out / attendance_id set to null.
+    Declared before /{attendance_id} so 'today' is not read as an id."""
+    bs_date, rows, total = await service.today_roster(org.id, page=page, limit=limit)
+    data = TodayAttendanceList(
+        bs_date=bs_date,
+        employees=[
+            EmployeeDayAttendance(
+                employee_id=employee.id,
+                attendance_id=record.id if record else None,
+                name=employee.name,
+                role=employee.role_title,
+                phone=employee.phone,
+                status=record.status if record else None,
+                bs_date=record.bs_date if record else bs_date,
+                check_in=record.check_in if record else None,
+                check_out=record.check_out if record else None,
+                overtime_hours=(
+                    record.overtime_hours if record else Decimal("0")
+                ),
+                note=record.note if record else None,
+            )
+            for employee, record in rows
+        ],
+        pagination=Pagination.build(total=total, page=page, limit=limit),
+    )
+    return success_response(data, "Today's attendance fetched")
 
 
 # ---------- CRUD ----------

@@ -15,6 +15,8 @@ from app.utils.exceptions import (
 )
 from app.utils.logger import get_logger
 
+from app.modules.employees.employees_models import Employee
+
 from .attendance_models import Attendance
 from .attendance_repository import AttendanceRepository
 from .attendance_schemas import (
@@ -27,6 +29,7 @@ from .attendance_types import (
     NO_WORK_STATUSES,
     STATUSES,
     bs_days_between,
+    today_bs,
 )
 
 logger = get_logger(__name__)
@@ -162,6 +165,16 @@ class AttendanceService:
             page=page,
             limit=limit,
         )
+
+    async def today_roster(
+        self, org_id: uuid.UUID, *, page: int, limit: int
+    ) -> tuple[str, Sequence[tuple[Employee, Attendance | None]], int]:
+        """All employees with their attendance for today's BS date."""
+        bs_date = today_bs()
+        rows, total = await self.repo.daily_roster(
+            org_id, bs_date, page=page, limit=limit
+        )
+        return bs_date, rows, total
 
     async def update(
         self, org_id: uuid.UUID, attendance_id: uuid.UUID, data: AttendanceUpdate

@@ -90,6 +90,32 @@ class AttendanceRepository:
         )
         return rows.all(), total or 0
 
+    async def daily_roster(
+        self, org_id: uuid.UUID, bs_date: str, *, page: int, limit: int
+    ) -> tuple[Sequence[tuple[Employee, Attendance | None]], int]:
+        """Every employee with their attendance row for bs_date (None when not marked)."""
+        filters: list[Any] = [
+            Employee.organization_id == org_id,
+            Employee.deleted_at.is_(None),
+        ]
+        total = await self.session.scalar(
+            select(func.count()).select_from(Employee).where(*filters)
+        )
+        rows = await self.session.execute(
+            select(Employee, Attendance)
+            .outerjoin(
+                Attendance,
+                (Attendance.employee_id == Employee.id)
+                & (Attendance.organization_id == org_id)
+                & (Attendance.bs_date == bs_date),
+            )
+            .where(*filters)
+            .order_by(Employee.name.asc(), Employee.id.asc())
+            .limit(limit)
+            .offset((page - 1) * limit)
+        )
+        return [(employee, record) for employee, record in rows.all()], total or 0
+
     async def list_for_employee(
         self, org_id: uuid.UUID, employee_id: uuid.UUID, from_date: str, to_date: str
     ) -> Sequence[Attendance]:

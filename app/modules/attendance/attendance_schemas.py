@@ -4,9 +4,8 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Self
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
-
 from app.modules.attendance.attendance_types import BsDate, Hours, Time12, TotalHours
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class Pagination(BaseModel):  # use your shared Pagination if you have one
@@ -80,13 +79,33 @@ class AttendanceList(BaseModel):
     pagination: Pagination
 
 
+class EmployeeDayAttendance(BaseModel):
+    """One employee plus their attendance for a single BS date (nulls = not marked)."""
+
+    employee_id: uuid.UUID
+    attendance_id: uuid.UUID | None
+    name: str
+    role: str | None
+    phone: str | None
+    status: str | None
+    bs_date: str
+    check_in: Time12 | None
+    check_out: Time12 | None
+    overtime_hours: Hours
+    note: str | None = None
+
+
+class TodayAttendanceList(BaseModel):
+    bs_date: str  # today's BS date, the day this roster covers
+    employees: list[EmployeeDayAttendance]
+    pagination: Pagination
+
+
 class EmployeeBrief(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
     name: str
-
-
 
 
 class EmployeeAttendanceSummary(BaseModel):

@@ -37,6 +37,12 @@ def parse_bs_date(value: str) -> str:
     )
 
 
+def today_bs() -> str:
+    """Today's date in BS as a zero-padded 'YYYY-MM-DD' string."""
+    today = nepali_datetime.date.today()
+    return f"{today.year:04d}-{today.month:02d}-{today.day:02d}"
+
+
 def bs_days_between(from_date: str, to_date: str) -> int:
     """Number of days from from_date to to_date (0 when they are the same day)."""
     start = nepali_datetime.date(*map(int, from_date.split("-")))
