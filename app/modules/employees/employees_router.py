@@ -3,7 +3,7 @@ import uuid
 import math
 from fastapi import APIRouter, Query, status
 from fastapi.responses import JSONResponse
-from ...utils.response import APIResponse, success_response
+from ...utils.response import APIResponse, success_response,Pagination
 from .employees_dependencies import EmployeeServiceDep
 from .employees_schemas import (
     EmployeeCreate,
@@ -12,7 +12,6 @@ from .employees_schemas import (
     EmployeeRead,
     EmployeeUpdate,
 )
-from ...utils.response import Pagination
 # from ..auth.auth_dependencies import CurrentUser
 from ..organization.organization_dependencies import CurrentOrganization
 

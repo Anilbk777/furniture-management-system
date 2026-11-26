@@ -19,6 +19,10 @@ import app.modules.organization.organization_models  # noqa: F401
 import app.modules.party.party_models  # noqa: F401
 import app.modules.transaction.transaction_models  # noqa: F401
 import app.modules.attendance.attendance_models  # noqa: F401
+import app.modules.customer.customer_models  # noqa: F401
+import app.modules.order.order_models # noqa: F401
+
+
 
 config = context.config
 if config.config_file_name is not None:
